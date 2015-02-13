@@ -511,7 +511,7 @@ GuiInterface.prototype.GetExtendedEntityState = function(player, ent)
 			"type": cmpResourceSupply.GetType(),
 			"killBeforeGather": cmpResourceSupply.GetKillBeforeGather(),
 			"maxGatherers": cmpResourceSupply.GetMaxGatherers(),
-			"gatherers": cmpResourceSupply.GetGatherers()
+			"gatherers": cmpResourceSupply.GetGatherers().concat(cmpResourceSupply.GetEnroute(player))
 		};
 	}
 	if (cmpMirage && cmpMirage.ResourceSupply())

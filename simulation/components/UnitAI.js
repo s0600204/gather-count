@@ -1979,7 +1979,7 @@ UnitAI.prototype.UnitFsmSpec = {
 					var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
 					var cmpMirage = Engine.QueryInterface(this.gatheringTarget, IID_Mirage);
 					if ((!cmpMirage || !cmpMirage.ResourceSupply()) &&
-					    (!cmpSupply || !cmpSupply.AddGatherer(cmpOwnership.GetOwner(), this.entity)))
+					    (!cmpSupply || !cmpSupply.AddEnrouteGatherer(cmpOwnership.GetOwner(), this.entity)))
 					{
 						// Save the current order's data in case we need it later
 						var oldType = this.order.data.type;
@@ -2031,6 +2031,23 @@ UnitAI.prototype.UnitFsmSpec = {
 					return false;
 				},
 
+				"MoveStarted": function (msg) {
+					if (this.gatheringTarget != this.order.data.target)
+					{
+						// User has changed their mind about which resource they wish this unit to head towards
+						
+						var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
+						var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
+						if (cmpSupply)
+							cmpSupply.RemoveEnrouteGatherer(this.entity, cmpOwnership.GetOwner());
+						
+						this.gatheringTarget = this.order.data.target;
+						cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
+						if (cmpSupply)
+							cmpSupply.AddEnrouteGatherer(cmpOwnership.GetOwner(), this.entity);
+					}
+				},
+
 				"MoveCompleted": function(msg) {
 					if (msg.data.error)
 					{
@@ -2040,9 +2057,9 @@ UnitAI.prototype.UnitFsmSpec = {
 						var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
 						var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
 						if (cmpSupply && cmpOwnership)
-							cmpSupply.RemoveGatherer(this.entity, cmpOwnership.GetOwner());
+							cmpSupply.RemoveEnrouteGatherer(this.entity, cmpOwnership.GetOwner());
 						else if (cmpSupply)
-							cmpSupply.RemoveGatherer(this.entity);
+							cmpSupply.RemoveEnrouteGatherer(this.entity);
 
 						// Save the current order's data in case we need it later
 						var oldType = this.order.data.type;
@@ -2080,11 +2097,13 @@ UnitAI.prototype.UnitFsmSpec = {
 				},
 
 				"leave": function() {
-					// don't use ownership because this is called after a conversion/resignation
-					// and the ownership would be invalid then.
+					var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
 					var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
 					if (cmpSupply)
-						cmpSupply.RemoveGatherer(this.entity);
+						if (cmpOwnership)
+							cmpSupply.RemoveEnrouteGatherer(this.entity, cmpOwnership.GetOwner());
+						else
+							cmpSupply.RemoveEnrouteGatherer(this.entity);
 					delete this.gatheringTarget;
 				},
 			},
@@ -2198,8 +2217,6 @@ UnitAI.prototype.UnitFsmSpec = {
 				"leave": function() {
 					this.StopTimer();
 
-					// don't use ownership because this is called after a conversion/resignation
-					// and the ownership would be invalid then.
 					var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
 					if (cmpSupply)
 						cmpSupply.RemoveGatherer(this.entity);
