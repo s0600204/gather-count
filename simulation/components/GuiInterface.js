@@ -525,7 +525,7 @@ GuiInterface.prototype.GetExtendedEntityState = function(player, ent)
 			"type": cmpResourceSupply.GetType(),
 			"killBeforeGather": cmpResourceSupply.GetKillBeforeGather(),
 			"maxGatherers": cmpResourceSupply.GetMaxGatherers(),
-			"numGatherers": cmpResourceSupply.GetNumGatherers()
+			"numGatherers": cmpResourceSupply.GetNumGatherers() + cmpResourceSupply.GetNumEnroute(player)
 		};
 	}
 
