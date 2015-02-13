@@ -1,0 +1,9 @@
+{
+    "name": "gather",
+    "version": "0.0.1",
+    "label": "Modification to Gather Counts",
+    "url": "",
+    "description": "Modification to how gatherer counts are established",
+    "dependencies": ["0ad"],
+    "type": "visualisation"
+}
