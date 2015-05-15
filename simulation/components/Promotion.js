@@ -66,8 +66,8 @@ Promotion.prototype.Promote = function(promotedTemplateName)
 	var cmpPromotedUnitResourceGatherer = Engine.QueryInterface(promotedUnitEntity, IID_ResourceGatherer);
 	if (cmpCurrentUnitResourceGatherer && cmpPromotedUnitResourceGatherer)
 	{
-		var carriedResorces = cmpCurrentUnitResourceGatherer.GetCarryingStatus();
-		cmpPromotedUnitResourceGatherer.GiveResources(carriedResorces);
+		var carriedResources = cmpCurrentUnitResourceGatherer.GetCarryingStatus();
+		cmpPromotedUnitResourceGatherer.GiveResources(carriedResources);
 		cmpPromotedUnitResourceGatherer.SetLastCarriedType( cmpCurrentUnitResourceGatherer.GetLastCarriedType() );
 	}
 
@@ -105,8 +105,9 @@ Promotion.prototype.Promote = function(promotedTemplateName)
 	{
 		var cmpPlayer = cmpPromotedUnitAI.GetOwner(promotedUnitEntity);
 		if (cmpPlayer)
-			cmpPromotedUnitAI.SetGathering( cmpPlayer.AddResourceGatherer(promotedUnitEntity,
-					cmpCurrentUnitResourceGatherer.GetLastGathered()) );
+			cmpPromotedUnitAI.SetGathering(cmpPlayer.AddResourceGatherer(
+					promotedUnitEntity, cmpCurrentUnitResourceGatherer.GetLastGathered()
+				));
 	}
 
 	var workOrders = cmpCurrentUnitAI.GetWorkOrders();
