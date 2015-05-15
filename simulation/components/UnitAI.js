@@ -911,9 +911,11 @@ UnitAI.prototype.UnitFsmSpec = {
 				// TODO: Should we issue a gather-near-position order
 				// if the target isn't gatherable/doesn't exist anymore?
 				else
+				{
 					// Out of range; move there in formation
 					this.PushOrderFront("WalkToTargetRange", { "target": msg.data.target, "min": 0, "max": 10 });
 					this.SetNextState("GATHER");
+				}
 				return;
 			}
 			this.CallMemberFunction("Gather", [msg.data.target, false]);
@@ -1113,12 +1115,21 @@ UnitAI.prototype.UnitFsmSpec = {
 				var cmpMirage = Engine.QueryInterface(this.gatheringTarget, IID_Mirage);
 				if (cmpMirage && cmpMirage.ResourceSupply())
 					this.gatheringTarget = cmpMirage.parent;
-					
+
+				var gatheringType = this.orderQueue[1].data.type;
 				var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
+				var cmpPlayer = this.GetOwnerPlayer(this.entity);
 				var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
 				if (cmpSupply)
 					for (let memb of this.members)
+					{
 						cmpSupply.AddEnrouteGatherer(cmpOwnership.GetOwner(), memb);
+						if (cmpPlayer && cmpPlayer.AddResourceGatherer(memb, gatheringType))
+						{
+							let cmpUnitAI = Engine.QueryInterface(memb, IID_UnitAI);
+							cmpUnitAI.isGatherer = true;
+						}
+					}
 			},
 			
 			"MoveCompleted": function(msg) {
@@ -1127,12 +1138,22 @@ UnitAI.prototype.UnitFsmSpec = {
 					// remove members from the list of entities approaching the Resource.
 					var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
 					var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
-					if (cmpSupply && cmpOwnership)
-						for (let memb of this.members)
-							cmpSupply.RemoveEnrouteGatherer(memb, cmpOwnership.GetOwner());
-					else if (cmpSupply)
-						for (let memb of this.members)
-							cmpSupply.RemoveEnrouteGatherer(memb);
+					var cmpPlayer = this.GetOwnerPlayer(this.entity);
+					
+					for (let memb of this.members)
+					{
+						if (cmpSupply)
+							if (cmpOwnership)
+								cmpSupply.RemoveEnrouteGatherer(memb, cmpOwnership.GetOwner());
+							else
+								cmpSupply.RemoveEnrouteGatherer(memb);
+
+						if (cmpPlayer && cmpPlayer.RemoveResourceGatherer(memb, false))
+						{
+							let cmpUnitAI = Engine.QueryInterface(memb, IID_UnitAI);
+							cmpUnitAI.isGatherer = false;
+						}
+					}
 				}
 				this.FinishOrder();
 			},
@@ -1140,13 +1161,23 @@ UnitAI.prototype.UnitFsmSpec = {
 			"leave": function(msg) {
 				var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
 				var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
-				if (cmpSupply)
-					if (cmpOwnership)
-						for (let memb of this.members)
+				var cmpPlayer = this.GetOwnerPlayer(this.entity);
+
+				for (let memb of this.members)
+				{
+					if (cmpSupply)
+						if (cmpOwnership)
 							cmpSupply.RemoveEnrouteGatherer(memb, cmpOwnership.GetOwner());
-					else
-						for (let memb of this.members)
+						else
 							cmpSupply.RemoveEnrouteGatherer(memb);
+
+					if (cmpPlayer && cmpPlayer.RemoveResourceGatherer(memb, false))
+					{
+						let cmpUnitAI = Engine.QueryInterface(memb, IID_UnitAI);
+						cmpUnitAI.isGatherer = false;
+					}
+				}
+
 				delete this.gatheringTarget;
 			}
 		},
@@ -2090,6 +2121,11 @@ UnitAI.prototype.UnitFsmSpec = {
 						}
 						return true;
 					}
+
+					var cmpPlayer = this.GetOwnerPlayer(this.entity);
+					if (cmpPlayer && cmpPlayer.AddResourceGatherer(this.entity, this.order.data.type))
+						this.isGatherer = true;
+
 					return false;
 				},
 
@@ -2102,7 +2138,14 @@ UnitAI.prototype.UnitFsmSpec = {
 						var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
 						if (cmpSupply)
 							cmpSupply.RemoveEnrouteGatherer(this.entity, cmpOwnership.GetOwner());
-						
+
+						var cmpPlayer = this.GetOwnerPlayer(this.entity);
+						if (cmpPlayer)
+						{
+							cmpPlayer.RemoveResourceGatherer(this.entity, false);
+							cmpPlayer.AddResourceGatherer(this.entity, this.order.data.type);
+						}
+
 						this.gatheringTarget = this.order.data.target;
 						cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
 						if (cmpSupply)
@@ -2122,6 +2165,10 @@ UnitAI.prototype.UnitFsmSpec = {
 							cmpSupply.RemoveEnrouteGatherer(this.entity, cmpOwnership.GetOwner());
 						else if (cmpSupply)
 							cmpSupply.RemoveEnrouteGatherer(this.entity);
+
+						var cmpPlayer = this.GetOwnerPlayer(this.entity);
+						if (cmpPlayer && cmpPlayer.RemoveResourceGatherer(this.entity, false))
+							this.isGatherer = false;
 
 						// Save the current order's data in case we need it later
 						var oldType = this.order.data.type;
@@ -2166,6 +2213,9 @@ UnitAI.prototype.UnitFsmSpec = {
 							cmpSupply.RemoveEnrouteGatherer(this.entity, cmpOwnership.GetOwner());
 						else
 							cmpSupply.RemoveEnrouteGatherer(this.entity);
+					var cmpPlayer = this.GetOwnerPlayer(this.entity);
+					if (cmpPlayer && cmpPlayer.RemoveResourceGatherer(this.entity, false))
+						this.isGatherer = false;
 					delete this.gatheringTarget;
 				},
 			},
@@ -3771,13 +3821,6 @@ UnitAI.prototype.ReplaceOrder = function(type, data)
 	{
 		this.orderQueue = [];
 		this.PushOrder(type, data);
-		
-		if (this.isGatherer)
-		{
-			var cmpPlayer = this.GetOwnerPlayer(this.entity);
-			if (cmpPlayer && cmpPlayer.RemoveResourceGatherer(this.entity, true))
-				this.isGatherer = false;
-		}
 	}
 };
 
