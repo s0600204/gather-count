@@ -912,9 +912,9 @@ UnitAI.prototype.UnitFsmSpec = {
 				else
 					// Out of range; move there in formation
 					this.PushOrderFront("WalkToTargetRange", { "target": msg.data.target, "min": 0, "max": 10 });
+					this.SetNextState("GATHER");
 				return;
 			}
-
 			this.CallMemberFunction("Gather", [msg.data.target, false]);
 
 			this.SetNextStateAlwaysEntering("MEMBER");
@@ -1095,6 +1095,59 @@ UnitAI.prototype.UnitFsmSpec = {
 					this.SetNextStateAlwaysEntering("MEMBER");
 				},
 			},
+		},
+
+		"GATHER": {
+			"enter": function(msg) {
+				var cmpFormation = Engine.QueryInterface(this.entity, IID_Formation);
+				cmpFormation.SetRearrange(true);
+				cmpFormation.MoveMembersIntoFormation(true, true);
+				
+				var cmpFormation = Engine.QueryInterface(this.entity, IID_Formation);
+				if (!cmpFormation)
+					return;
+				this.members = cmpFormation.GetMembers();
+				
+				this.gatheringTarget = this.order.data.target;
+				var cmpMirage = Engine.QueryInterface(this.gatheringTarget, IID_Mirage);
+				if (cmpMirage && cmpMirage.ResourceSupply())
+					this.gatheringTarget = cmpMirage.parent;
+					
+				var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
+				var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
+				if (cmpSupply)
+					for (let memb of this.members)
+						cmpSupply.AddEnrouteGatherer(cmpOwnership.GetOwner(), memb);
+			},
+			
+			"MoveCompleted": function(msg) {
+				if (msg.data.error)
+				{
+					// remove members from the list of entities approaching the Resource.
+					var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
+					var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
+					if (cmpSupply && cmpOwnership)
+						for (let memb of this.members)
+							cmpSupply.RemoveEnrouteGatherer(memb, cmpOwnership.GetOwner());
+					else if (cmpSupply)
+						for (let memb of this.members)
+							cmpSupply.RemoveEnrouteGatherer(memb);
+				}
+				this.FinishOrder();
+			},
+			
+			"leave": function(msg) {
+				var cmpOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
+				var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
+				if (cmpSupply)
+					if (cmpOwnership)
+						for (let memb of this.members)
+							cmpSupply.RemoveEnrouteGatherer(memb, cmpOwnership.GetOwner());
+					else
+						for (let memb of this.members)
+							cmpSupply.RemoveEnrouteGatherer(memb);
+				delete this.gatheringTarget;
+			}
 		},
 
 		"FORMING": {
