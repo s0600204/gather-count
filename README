@@ -1,0 +1,79 @@
+
+Amendment to Gatherer Count on Resources
+
+
+Description
+------------------------------------------------------------------------
+There was some discussion some time ago about short comings in the
+current Gatherer count on resources, and how it was possible, for
+example, for a player to assign units to a resource and, even if that
+resource was half-way across the map, no other player would be able to
+gather at that resource. (Some of this discussion can be found at
+http://wildfiregames.com/forum/index.php?showtopic=17461. Also see
+issues #643, #1387 and #1871)
+
+Several possible solutions were given, from removing gatherer limits
+entirely, to making the limits be player-specific, to some complex
+solution involving hard/soft limits and/or distance. As far as I am
+aware, the solution used in this mod is not something that has been
+proposed or considered yet.
+
+This solution retains the global `Gatherer` list of each`ResourceSupply`,
+but also adds a player-specific `EnrouteGatherer` list.  When a unit is
+tasked to gather, they are added to their owner's `EnrouteGatherer` list
+for the given resource. Upon arrival, they are then transferred to the
+globally shared `Gatherer` list. Later, when a `IsAvailable()` check is
+made by a player on the resource, the global `Gatherer` list is added to
+the querying player's `EnrouteGatherer` list and a count made that takes
+into account units belonging to all players that are currently at the
+resource and gathering, and any units belonging to the player in
+question that are currently enroute to the resource.
+
+The `EnrouteGatherer`s of Mutual Allies is not taken into account, but
+this could be achieved if desired.
+
+
+Demonstrative Example
+------------------------------------------------------------------------
+* Players 1 and 2 are both able to see a given tree. No-one is currently
+  gathering from this tree.
+* Player sends four units to gather from the tree. These units are now
+  "en-route".
+* Player 1 selects the tree, and sees that four of the eight gather
+  slots on the tree are filled.
+* Player 2 selects the tree, and sees that none of the gather slots are
+  filled, which makes sense as a player should not have advance notice
+  (by default) of enemy unit movements.
+* Player 1's units arrive and set to work. Player 2's UI updates itself
+  and shows that four of the tree's gather slots are now filled.
+
+Player 2 could only see that Player 1's units were assigned to the tree
+when they got there. Until then, as far as she knew, the tree was still
+free. Thus, a player does not have advance warning of enemy units on the
+way to gather.
+
+* Player 1 sends four more units to the same tree. According to his UI,
+  all the tree's gather slots are now occupied.
+* Player 2, whose UI still only shows four slots filled, sends her own
+  four units to gather. Her UI now also shows that all the tree's gather
+  slots are filled.
+* Player 2's units arrive first, and set to work. Player 1's units
+  arrive moments later, find the tree full and look for a nearby tree to
+  gather from instead.
+
+Although Player 1 sent his units to gather first, Player 2's units
+arrived first and thus took precedance when it came to assigning
+available gather slots. Thus, a player cannot remote-block another
+player's access to a resource by assigning to gather from a distance.
+
+
+License
+------------------------------------------------------------------------
+Any XML files within this work are based on work and examples by
+Wildfire Games, and are available under the Creative Commons Attribution
+ShareAlike 3.0 license. Details may be found at
+http://creativecommons.org/licenses/by-sa/3.0/
+
+The scripting and everything else contained within this work is
+released under the GPLv2+ license. Details may be found at
+http://opensource.org/licenses/GPL-2.0
