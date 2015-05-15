@@ -721,10 +721,14 @@ function updatePlayerDisplay()
 	if (!playerState)
 		return;
 
-	Engine.GetGUIObjectByName("resourceFood").caption = Math.floor(playerState.resourceCounts.food);
-	Engine.GetGUIObjectByName("resourceWood").caption = Math.floor(playerState.resourceCounts.wood);
-	Engine.GetGUIObjectByName("resourceStone").caption = Math.floor(playerState.resourceCounts.stone);
-	Engine.GetGUIObjectByName("resourceMetal").caption = Math.floor(playerState.resourceCounts.metal);
+	Engine.GetGUIObjectByName("resourceFood").caption = Math.floor(playerState.resourceCounts.food) +
+			" (" + playerState.resourceGatherers.count.food + ")";
+	Engine.GetGUIObjectByName("resourceWood").caption = Math.floor(playerState.resourceCounts.wood) +
+			" (" + playerState.resourceGatherers.count.wood + ")";
+	Engine.GetGUIObjectByName("resourceStone").caption = Math.floor(playerState.resourceCounts.stone) +
+			" (" + playerState.resourceGatherers.count.stone + ")";
+	Engine.GetGUIObjectByName("resourceMetal").caption = Math.floor(playerState.resourceCounts.metal) +
+			" (" + playerState.resourceGatherers.count.metal + ")";
 	Engine.GetGUIObjectByName("resourcePop").caption = playerState.popCount + "/" + playerState.popLimit;
 	Engine.GetGUIObjectByName("population").tooltip = translate("Population (current / limit)") + "\n" +
 					sprintf(translate("Maximum population: %(popCap)s"), { "popCap": playerState.popMax });

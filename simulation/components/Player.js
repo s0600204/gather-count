@@ -19,6 +19,18 @@ Player.prototype.Init = function()
 		"metal": 300,
 		"stone": 300
 	};
+	this.resourceGatherers = {
+		"food": {},
+		"wood": {},
+		"metal": {},
+		"stone": {},
+		"count": {
+			"food": 0,
+			"wood": 0,
+			"metal": 0,
+			"stone": 0
+		}
+	};
 	this.tradingGoods = [                      // goods for next trade-route and its proba in % (the sum of probas must be 100)
 		{ "goods":  "wood", "proba": 30 },
 		{ "goods": "stone", "proba": 35 },
@@ -187,6 +199,64 @@ Player.prototype.SetResourceCounts = function(resources)
 Player.prototype.GetResourceCounts = function()
 {
 	return this.resourceCount;
+};
+
+Player.prototype.RemoveResourceGatherer = function(gatherer, force)
+{
+	var cmpResourceGatherer = Engine.QueryInterface(gatherer, IID_ResourceGatherer);
+	if (!cmpResourceGatherer)
+		return false;
+
+	var resource = cmpResourceGatherer.GetLastGathered();
+	if (!resource)
+		return false;
+
+	var cmpUnitAI = Engine.QueryInterface(gatherer, IID_UnitAI);
+	var orders = cmpUnitAI.GetOrders();
+
+	var gatheredResource = undefined;
+	for (var j = 0; j < orders.length; ++j)
+	{
+		var order = orders[j];
+		if (order.type == "Gather" && !order.data.force)
+			gatheredResource = order.data.type.generic;
+	}
+
+	// Prune entities if they're no longer gathering or gathering a different resource.
+	if (!gatheredResource || gatheredResource != resource.generic || force)
+	{
+		cmpResourceGatherer.SetLastGathered(undefined);
+		var resourceType = (resource.generic == "treasure") ? resource.specific : resource.generic;
+		delete this.resourceGatherers[resourceType][gatherer];
+		this.resourceGatherers.count[resourceType]--;
+		return true;
+	}
+
+	return false;
+};
+
+Player.prototype.GetResourceGatherers = function()
+{
+	return this.resourceGatherers;
+};
+
+Player.prototype.AddResourceGatherer = function(gatherer, type)
+{
+	// We want to add units that are gathering a new resource.
+	var cmpResourceGatherer = Engine.QueryInterface(gatherer, IID_ResourceGatherer);
+	if (cmpResourceGatherer)
+	{
+		var lastGathered = cmpResourceGatherer.GetLastGathered();
+		if (!lastGathered || lastGathered.generic != type.generic)
+		{
+			cmpResourceGatherer.SetLastGathered(type);
+			var resourceType = (type.generic == "treasure") ? type.specific : type.generic;
+			this.resourceGatherers[resourceType][gatherer] = true;
+			this.resourceGatherers.count[resourceType]++;
+			return true;
+		}
+	}
+	return false;
 };
 
 /**

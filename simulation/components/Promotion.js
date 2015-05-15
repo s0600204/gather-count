@@ -68,6 +68,7 @@ Promotion.prototype.Promote = function(promotedTemplateName)
 	{
 		var carriedResorces = cmpCurrentUnitResourceGatherer.GetCarryingStatus();
 		cmpPromotedUnitResourceGatherer.GiveResources(carriedResorces);
+		cmpPromotedUnitResourceGatherer.SetLastCarriedType( cmpCurrentUnitResourceGatherer.GetLastCarriedType() );
 	}
 
 	var cmpCurrentUnitAI = Engine.QueryInterface(this.entity, IID_UnitAI);
@@ -97,6 +98,16 @@ Promotion.prototype.Promote = function(promotedTemplateName)
 		cmpPromotedUnitAI.Cheer();
 
 	cmpPromotedUnitAI.AddOrders(orders);
+
+	// Add the promoted entity to the gatherer counter if necessary. The
+	// old entity will be removed from the counter upon its destruction.
+	if (cmpCurrentUnitAI.IsGatherer() && cmpCurrentUnitResourceGatherer && cmpPromotedUnitResourceGatherer)
+	{
+		var cmpPlayer = cmpPromotedUnitAI.GetOwner(promotedUnitEntity);
+		if (cmpPlayer)
+			cmpPromotedUnitAI.SetGathering( cmpPlayer.AddResourceGatherer(promotedUnitEntity,
+					cmpCurrentUnitResourceGatherer.GetLastGathered()) );
+	}
 
 	var workOrders = cmpCurrentUnitAI.GetWorkOrders();
 	cmpPromotedUnitAI.SetWorkOrders(workOrders);
