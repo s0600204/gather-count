@@ -4,6 +4,6 @@
     "label": "Modification to Gather Counts",
     "url": "",
     "description": "Modification to how gatherer counts are established",
-    "dependencies": ["0ad"],
-    "type": "visualisation"
+    "dependencies": ["0ad>=0.0.19"],
+    "type": "gameplay"
 }
